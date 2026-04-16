@@ -8,7 +8,11 @@
 #include "uadk_benchmark.h"
 #include "sec_uadk_benchmark.h"
 #include "sec_wd_benchmark.h"
-#include "sec_soft_benchmark.h"
+// # if OPENSSL_VERSION_NUMBER < 0x30000000L
+// #include "sec_soft_benchmark.h"
+// # else
+#include "sec_soft3_benchmark.h"
+// # endif
 
 #include "hpre_uadk_benchmark.h"
 #include "hpre_wd_benchmark.h"
@@ -568,11 +572,17 @@ static int benchmark_run(struct acc_option *option)
 			ret = sec_wd_benchmark(option);
 		}
 		usleep(20000);
-#ifdef HAVE_CRYPTO
+// #ifdef HAVE_CRYPTO
+// # if OPENSSL_VERSION_NUMBER < 0x30000000L
+// 		if (option->modetype == SOFT_MODE) {
+// 			ret = sec_soft_benchmark(option);
+// 		}
+// # else
 		if (option->modetype == SOFT_MODE) {
-			ret = sec_soft_benchmark(option);
+			ret = sec_soft3_benchmark(option);
 		}
-#endif
+// # endif
+// #endif
 		break;
 	case HPRE_TYPE:
 		if (option->modetype == SVA_MODE) {

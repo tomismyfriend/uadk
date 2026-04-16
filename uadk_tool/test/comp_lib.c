@@ -10,6 +10,12 @@
 #include <math.h>
 #include <sys/mman.h>
 #include <zlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+// #include "openssl/md5.h"
+
+
 
 #include "comp_lib.h"
 
@@ -255,9 +261,18 @@ int calculate_md5(comp_md5_t *md5, const void *buf, size_t len)
 {
 	if (!md5 || !buf || !len)
 		return -EINVAL;
+
+# if OPENSSL_VERSION_NUMBER < 0x30000000L
 	MD5_Init(&md5->md5_ctx);
 	MD5_Update(&md5->md5_ctx, buf, len);
 	MD5_Final(md5->md, &md5->md5_ctx);
+# else
+	md5->ctx = EVP_MD_CTX_new();
+	EVP_DigestInit_ex2(md5->ctx, EVP_md5(), NULL);
+	EVP_DigestUpdate(md5->ctx, buf, len);
+	EVP_DigestFinal_ex(md5->ctx, md5->md, NULL);
+	EVP_MD_CTX_free(md5->ctx);
+# endif
 	return 0;
 }
 
@@ -425,7 +440,7 @@ static int chunk_inflate(void *in, size_t in_sz, void *out, size_t *out_sz,
 	do {
 		ret = inflate(&strm, Z_NO_FLUSH);
 		if ((ret < 0) || (ret == Z_NEED_DICT)) {
-			COMP_TST_PRT("zlib error %d - %s\n", ret, strm.msg);
+			COMP_TST_PRT("zlib error %d - %s %s\n", ret, strm.msg, __func__);
 			goto out;
 		}
 		if (!strm.avail_out) {
@@ -1319,7 +1334,7 @@ int hizip_check_output(void *buf, size_t size, size_t *checked,
 	do {
 		ret = inflate(&stream, Z_NO_FLUSH);
 		if (ret < 0 || ret == Z_NEED_DICT) {
-			COMP_TST_PRT("zlib error %d - %s\n", ret, stream.msg);
+			COMP_TST_PRT("zlib error %d - %s %s\n", ret, stream.msg, __func__);
 			ret = -ENOSR;
 			break;
 		}
@@ -1387,7 +1402,7 @@ int zlib_deflate(void *output, unsigned int out_size,
 	do {
 		ret = deflate(&stream, Z_FINISH);
 		if (ret == Z_STREAM_ERROR || ret == Z_BUF_ERROR) {
-			COMP_TST_PRT("zlib error %d - %s\n", ret, stream.msg);
+			COMP_TST_PRT("zlib error %d - %s %s\n", ret, stream.msg, __func__);
 			ret = -ENOSR;
 			break;
 		} else if (!stream.avail_in) {

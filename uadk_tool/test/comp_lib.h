@@ -22,6 +22,12 @@
 #include "include/wd_comp.h"
 #include "include/wd_sched.h"
 
+# if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include "openssl/opensslv.h"
+#include "openssl/evp.h"
+#include "openssl/ossl_typ.h"
+# endif
+
 #define SYS_ERR_COND(cond, msg, ...) \
 do { \
 	if (cond) { \
@@ -120,7 +126,11 @@ struct test_options {
 };
 
 typedef struct _comp_md5_t {
+# if OPENSSL_VERSION_NUMBER < 0x30000000L
 	MD5_CTX		md5_ctx;
+# else
+	EVP_MD_CTX	*ctx;
+# endif
 	unsigned char	md[MD5_DIGEST_LENGTH];
 } comp_md5_t;
 

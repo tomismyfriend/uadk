@@ -86,7 +86,7 @@ static void *sw_dfl_hw_ifl(void *arg)
 	void *tbuf;
 	size_t tbuf_sz;
 	chunk_list_t *tlist;
-	comp_md5_t final_md5 = {{0}};
+	comp_md5_t final_md5 = {0};
 	int i, ret;
 	__u32 tout_sz;
 
@@ -230,7 +230,7 @@ static void *hw_dfl_sw_ifl(void *arg)
 	void *tbuf;
 	size_t tbuf_sz;
 	chunk_list_t *tlist;
-	comp_md5_t final_md5 = {{0}};
+	comp_md5_t final_md5 = {0};
 	int i, ret;
 	__u32 tmp_sz;
 
@@ -374,7 +374,7 @@ static void *hw_dfl_hw_ifl(void *arg)
 	void *tbuf;
 	size_t tbuf_sz;
 	chunk_list_t *tlist;
-	comp_md5_t final_md5 = {{0}};
+	comp_md5_t final_md5 = {0};
 	int i, ret;
 	__u32 tmp_sz, tout_sz;
 
@@ -881,6 +881,7 @@ static int test_hw(struct test_options *opts, char *model)
 			goto out_src;
 		opts->total_len = statbuf.st_size;
 		info.in_size = opts->total_len;
+		COMP_TST_PRT("in_size : %d\n", info.in_size);
 		if (ifl_flag)
 			info.out_size = opts->total_len * INFLATION_RATIO;
 		else
@@ -893,6 +894,7 @@ static int test_hw(struct test_options *opts, char *model)
 
 	if (opts->is_file) {
 		ret = load_file_data(&info);
+		COMP_TST_PRT("file_size : %d\n", ret);
 		if (ret < 0)
 			goto out_buf;
 	} else {
