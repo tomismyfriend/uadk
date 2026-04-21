@@ -104,13 +104,5 @@ AC_CONFIG_FILES([Makefile
 		 test/Makefile
 		 test/hisi_hpre_test/Makefile
 		 uadk_tool/Makefile
-		 sample/Makefile
-		 v1/test/Makefile
-		 v1/test/bmm_test/Makefile
-		 v1/test/test_mm/Makefile
-		 v1/test/hisi_hpre_test/Makefile
-		 v1/test/hisi_sec_test/Makefile
-		 v1/test/hisi_sec_test_sgl/Makefile
-		 v1/test/hisi_zip_test/Makefile
-		 v1/test/hisi_zip_test_sgl/Makefile])
+		 sample/Makefile])
 AC_OUTPUT

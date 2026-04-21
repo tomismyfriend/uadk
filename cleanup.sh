@@ -1,8 +1,7 @@
 #!/bin/sh
 
-if [ -r Makefile ]; then
-	make distclean
-fi
+# Do NOT run make distclean first, just delete files directly
+# Running make distclean may trigger auto-rebuild rules causing loops
 
 FILES="aclocal.m4 autom4te.cache compile config.guess config.h.in config.log \
        config.status config.sub configure cscope.out depcomp install-sh      \
@@ -14,6 +13,7 @@ FILES="aclocal.m4 autom4te.cache compile config.guess config.h.in config.log \
        uadk_tool/Makefile uadk_tool/Makefile.in         \
        v1/Makefile.in v1/Makefile.in v1/test/Makefile v1/test/Makefile.in    \
        v1/test/test_mm/Makefile v1/test/test_mm/Makefile.in		     \
-       v1/test/bmm_test/Makefile v1/test/bmm_test/Makefile.in"
+       v1/test/bmm_test/Makefile v1/test/bmm_test/Makefile.in \
+       .libs *.o *.lo *.la"
 
 rm -vRf $FILES *~

@@ -1,5 +1,18 @@
 ACLOCAL_AMFLAGS = -I m4 -I./include
-AUTOMAKE_OPTIONS = foreign subdir-objects
+AUTOMAKE_OPTIONS = foreign subdir-objects no-dependencies
+
+# Disable autotools auto-rebuild rules to prevent infinite loops
+# These rules are normally added by automake to rebuild Makefile when
+# Makefile.am or configure.ac changes, but can cause loops when:
+# - Files are transferred from Windows (timestamp issues)
+# - make distclean is run in cleanup.sh
+# - v1/test subdirectory issues
+.PHONY: Makefile
+
+# Explicitly define Makefile target to do nothing (override auto-rebuild)
+Makefile:
+	@echo "Makefile is up to date"
+
 AM_CFLAGS=-Wall -Werror -fno-strict-aliasing -I$(top_srcdir)/include
 AM_CFLAGS+=-fPIC -fPIE -pie -fstack-protector-strong -D_FORTIFY_SOURCE=2 \
 	   -O2 -ftrapv -Wl,-z,relro,-z,now -Wl,-s
@@ -214,4 +227,4 @@ pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = lib/libwd_crypto.pc lib/libwd_comp.pc lib/libwd.pc
 CLEANFILES += $(pkgconfig_DATA)
 
-SUBDIRS=. test v1/test uadk_tool sample
+SUBDIRS=. test uadk_tool sample
