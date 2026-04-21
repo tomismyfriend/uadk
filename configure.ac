@@ -58,7 +58,7 @@ AC_CHECK_LIB(z, zlibVersion,
 	     [ have_zlib=false ])
 AM_CONDITIONAL([HAVE_ZLIB], [test "x$have_zlib" = "xtrue"])
 
-PKG_CHECK_MODULES(libcrypto, libcrypto < 3.0 libcrypto >= 1.1,
+PKG_CHECK_MODULES(libcrypto, libcrypto >= 1.1,
 	     [ AC_DEFINE(HAVE_CRYPTO, 1, [Have crypto])
 	       have_crypto=true ],
 	     [ have_crypto=false ])

@@ -257,50 +257,118 @@ void gen_random_data(void *buf, size_t len)
 		*((uint64_t *)buf + i) = nrand48(rand_state);
 }
 
-int calculate_md5(comp_md5_t *md5, const void *buf, size_t len)
+static const EVP_MD *get_evp_md_by_type(int type, unsigned int *digest_len)
 {
-	if (!md5 || !buf || !len)
+	switch (type) {
+	case DIGEST_MD5:
+		*digest_len = MD5_DIGEST_LENGTH;
+		return EVP_md5();
+	case DIGEST_SHA1:
+		*digest_len = SHA_DIGEST_LENGTH;
+		return EVP_sha1();
+	case DIGEST_SHA256:
+		*digest_len = SHA256_DIGEST_LENGTH;
+		return EVP_sha256();
+	case DIGEST_SHA384:
+		*digest_len = SHA384_DIGEST_LENGTH;
+		return EVP_sha384();
+	case DIGEST_SHA512:
+		*digest_len = SHA512_DIGEST_LENGTH;
+		return EVP_sha512();
+	case DIGEST_SM3:
+		*digest_len = SM3_DIGEST_LENGTH;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+		return EVP_sm3();
+#else
+		return NULL;
+#endif
+	default:
+		*digest_len = MD5_DIGEST_LENGTH;
+		return EVP_md5();
+	}
+}
+
+int calculate_digest(comp_digest_t *digest, const void *buf, size_t len, int type)
+{
+	const EVP_MD *md;
+	unsigned int out_len;
+	int ret;
+
+	if (!digest || !buf || !len)
+		return -EINVAL;
+	if (type < 0 || type >= DIGEST_TYPE_MAX)
 		return -EINVAL;
 
-# if OPENSSL_VERSION_NUMBER < 0x30000000L
-	MD5_Init(&md5->md5_ctx);
-	MD5_Update(&md5->md5_ctx, buf, len);
-	MD5_Final(md5->md, &md5->md5_ctx);
-# else
-	md5->ctx = EVP_MD_CTX_new();
-	EVP_DigestInit_ex2(md5->ctx, EVP_md5(), NULL);
-	EVP_DigestUpdate(md5->ctx, buf, len);
-	EVP_DigestFinal_ex(md5->ctx, md5->md, NULL);
-	EVP_MD_CTX_free(md5->ctx);
-# endif
+	digest->type = type;
+	md = get_evp_md_by_type(type, &out_len);
+	if (!md) {
+		COMP_TST_PRT("digest type %d not supported\n", type);
+		return -EINVAL;
+	}
+	digest->digest_ctx = EVP_MD_CTX_new();
+	if (!digest->digest_ctx)
+		return -ENOMEM;
+	ret = EVP_DigestInit_ex(digest->digest_ctx, md, NULL);
+	if (ret != 1) {
+		EVP_MD_CTX_free(digest->digest_ctx);
+		return -EINVAL;
+	}
+	ret = EVP_DigestUpdate(digest->digest_ctx, buf, len);
+	if (ret != 1) {
+		EVP_MD_CTX_free(digest->digest_ctx);
+		return -EINVAL;
+	}
+	ret = EVP_DigestFinal_ex(digest->digest_ctx, digest->digest, &digest->digest_len);
+	if (ret != 1) {
+		EVP_MD_CTX_free(digest->digest_ctx);
+		return -EINVAL;
+	}
+	EVP_MD_CTX_free(digest->digest_ctx);
 	return 0;
+}
+
+int calculate_md5(comp_md5_t *md5, const void *buf, size_t len)
+{
+	return calculate_digest(md5, buf, len, DIGEST_MD5);
+}
+
+static void dump_digest(comp_digest_t *digest)
+{
+	int i;
+
+	for (i = 0; i < digest->digest_len - 1; i++)
+		COMP_TST_PRT("%02x-", digest->digest[i]);
+	COMP_TST_PRT("%02x\n", digest->digest[i]);
 }
 
 static void dump_md5(comp_md5_t *md5)
 {
-	int i;
-
-	for (i = 0; i < MD5_DIGEST_LENGTH - 1; i++)
-		COMP_TST_PRT("%02x-", md5->md[i]);
-	COMP_TST_PRT("%02x\n", md5->md[i]);
+	dump_digest(md5);
 }
 
-int cmp_md5(comp_md5_t *orig, comp_md5_t *final)
+int cmp_digest(comp_digest_t *orig, comp_digest_t *final)
 {
 	int i;
 
 	if (!orig || !final)
 		return -EINVAL;
-	for (i = 0; i < MD5_DIGEST_LENGTH; i++) {
-		if (orig->md[i] != final->md[i]) {
-			COMP_TST_PRT("Original MD5: ");
-			dump_md5(orig);
-			COMP_TST_PRT("Final MD5: ");
-			dump_md5(final);
+	if (orig->digest_len != final->digest_len)
+		return -EINVAL;
+	for (i = 0; i < orig->digest_len; i++) {
+		if (orig->digest[i] != final->digest[i]) {
+			COMP_TST_PRT("Original digest: ");
+			dump_digest(orig);
+			COMP_TST_PRT("Final digest: ");
+			dump_digest(final);
 			return -EINVAL;
 		}
 	}
 	return 0;
+}
+
+int cmp_md5(comp_md5_t *orig, comp_md5_t *final)
+{
+	return cmp_digest(orig, final);
 }
 
 static void *async_cb(struct wd_comp_req *req, void *data)

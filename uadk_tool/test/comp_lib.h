@@ -8,7 +8,15 @@
 #define TEST_LIB_H_
 
 #include <errno.h>
+#include <openssl/opensslv.h>
 #include <openssl/md5.h>
+#include <openssl/sha.h>
+#include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/sm3.h>
+#else
+#define SM3_DIGEST_LENGTH 32
+#endif
 #include <semaphore.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,12 +29,6 @@
 #include "config.h"
 #include "include/wd_comp.h"
 #include "include/wd_sched.h"
-
-# if OPENSSL_VERSION_NUMBER >= 0x30000000L
-#include "openssl/opensslv.h"
-#include "openssl/evp.h"
-#include "openssl/ossl_typ.h"
-# endif
 
 #define SYS_ERR_COND(cond, msg, ...) \
 do { \
@@ -51,6 +53,18 @@ enum mode {
 	MODE_BLOCK,
 	MODE_STREAM,
 };
+
+enum digest_type {
+	DIGEST_MD5,
+	DIGEST_SHA1,
+	DIGEST_SHA256,
+	DIGEST_SHA384,
+	DIGEST_SHA512,
+	DIGEST_SM3,
+	DIGEST_TYPE_MAX,
+};
+
+#define MAX_DIGEST_LENGTH	64
 
 #define __ALIGN_MASK(x, mask)	(((x) + (mask)) & ~(mask))
 #define ALIGN(x, a)		__ALIGN_MASK(x, (typeof(x))(a)-1)
@@ -125,6 +139,13 @@ struct test_options {
 
 };
 
+typedef struct _comp_digest_t {
+	int type;
+	EVP_MD_CTX	*digest_ctx;
+	unsigned char	digest[MAX_DIGEST_LENGTH];
+	unsigned int	digest_len;
+} comp_digest_t;
+
 typedef struct _comp_md5_t {
 # if OPENSSL_VERSION_NUMBER < 0x30000000L
 	MD5_CTX		md5_ctx;
@@ -193,7 +214,9 @@ void *send_thread_func(void *arg);
 void *poll_thread_func(void *arg);
 
 void gen_random_data(void *buf, size_t len);
+int calculate_digest(comp_digest_t *digest, const void *buf, size_t len, int type);
 int calculate_md5(comp_md5_t *md5, const void *buf, size_t len);
+int cmp_digest(comp_digest_t *orig, comp_digest_t *final);
 int cmp_md5(comp_md5_t *orig, comp_md5_t *final);
 
 void init_chunk_list(chunk_list_t *list, void *buf, size_t buf_sz,
