@@ -611,6 +611,24 @@ static struct wd_sched sched_table[SCHED_POLICY_BUTT] = {
 		.sched_init = session_dev_sched_init,
 		.pick_next_ctx = session_sched_pick_next_ctx,
 		.poll_policy = session_sched_poll_policy,
+	}, {
+		.name = "Loop scheduler",
+		.sched_policy = SCHED_POLICY_LOOP,
+		.sched_init = session_sched_init,
+		.pick_next_ctx = session_sched_pick_next_ctx,
+		.poll_policy = session_sched_poll_policy,
+	}, {
+		.name = "Hungry scheduler",
+		.sched_policy = SCHED_POLICY_HUNGRY,
+		.sched_init = session_sched_init,
+		.pick_next_ctx = session_sched_pick_next_ctx,
+		.poll_policy = session_sched_poll_policy,
+	}, {
+		.name = "Instruction scheduler",
+		.sched_policy = SCHED_POLICY_INSTR,
+		.sched_init = session_sched_init,
+		.pick_next_ctx = session_sched_pick_next_ctx,
+		.poll_policy = session_sched_poll_policy,
 	}
 };
 
