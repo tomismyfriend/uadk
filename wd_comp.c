@@ -124,6 +124,76 @@ static void wd_comp_clear_status(void)
 	wd_alg_clear_init(&wd_comp_setting.status);
 }
 
+static int wd_comp_sched_type_check(char *alg, __u32 *sched_type, int task_type)
+{
+	struct uacce_dev_list *list;
+	bool is_sva = false;
+
+	/* Only check for TASK_HW and TASK_MIX */
+	if (task_type != TASK_HW && task_type != TASK_MIX)
+		return 0;
+
+	/* Detect SVA mode from hardware device */
+	list = wd_get_accel_list(alg);
+	if (!list)
+		return 0;
+
+	if (list->dev && ((unsigned int)list->dev->flags & UACCE_DEV_SVA))
+		is_sva = true;
+	wd_free_list_accels(list);
+
+	if (is_sva) {
+		switch (*sched_type) {
+		case SCHED_POLICY_RR:
+		case SCHED_POLICY_LOOP:
+		case SCHED_POLICY_HUNGRY:
+			return 0;
+		case SCHED_POLICY_DEV:
+			if (task_type == TASK_HW)
+				return 0;
+			WD_ERR("invalid: SVA mode not support SCHED_POLICY_DEV with TASK_MIX!\n");
+			return -WD_EINVAL;
+		case SCHED_POLICY_NONE:
+		case SCHED_POLICY_SINGLE:
+		case SCHED_POLICY_INSTR:
+			WD_ERR("invalid: SVA mode not support sched policy %u!\n",
+			       *sched_type);
+			return -WD_EINVAL;
+		default:
+			WD_ERR("invalid: unknown sched policy %u!\n", *sched_type);
+			return -WD_EINVAL;
+		}
+	}
+
+	/* NOSVA mode rules */
+	switch (*sched_type) {
+	case SCHED_POLICY_RR:
+	case SCHED_POLICY_LOOP:
+	case SCHED_POLICY_HUNGRY:
+		if (task_type == TASK_HW) {
+			*sched_type = SCHED_POLICY_DEV;
+			return 0;
+		}
+		WD_ERR("invalid: NOSVA mode not support sched policy %u with TASK_MIX!\n",
+		       *sched_type);
+		return -WD_EINVAL;
+	case SCHED_POLICY_DEV:
+		if (task_type == TASK_HW)
+			return 0;
+		WD_ERR("invalid: NOSVA mode not support SCHED_POLICY_DEV with TASK_MIX!\n");
+		return -WD_EINVAL;
+	case SCHED_POLICY_NONE:
+	case SCHED_POLICY_SINGLE:
+	case SCHED_POLICY_INSTR:
+		WD_ERR("invalid: NOSVA mode not support sched policy %u!\n",
+		       *sched_type);
+		return -WD_EINVAL;
+	default:
+		WD_ERR("invalid: unknown sched policy %u!\n", *sched_type);
+		return -WD_EINVAL;
+	}
+}
+
 static bool wd_comp_alg_check(const char *alg_name)
 {
 	int i;
@@ -268,6 +338,10 @@ int wd_comp_init2_(char *alg, __u32 sched_type, int task_type, struct wd_ctx_par
 		WD_ERR("invalid: comp:%s unsupported!\n", alg);
 		goto out_uninit;
 	}
+
+	state = wd_comp_sched_type_check(alg, &sched_type, task_type);
+	if (state)
+		goto out_uninit;
 
 	state = wd_comp_open_driver(WD_TYPE_V2);
 	if (state)

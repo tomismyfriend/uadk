@@ -25,6 +25,12 @@ enum sched_policy_type {
 	SCHED_POLICY_SINGLE,
 	/* requests will be sent to ctxs and dev_id */
 	SCHED_POLICY_DEV,
+	/* requests will be sent to ctxs in a loop */
+	SCHED_POLICY_LOOP,
+	/* requests will be sent to ctxs using hungry scheduling */
+	SCHED_POLICY_HUNGRY,
+	/* requests will be sent to instruction scheduler */
+	SCHED_POLICY_INSTR,
 	SCHED_POLICY_BUTT,
 };
 
